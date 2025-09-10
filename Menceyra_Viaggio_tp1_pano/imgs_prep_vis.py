@@ -1,0 +1,69 @@
+import cv2
+from matplotlib import pyplot as plt
+
+# --- PREPROCESAMIENTO ---
+def imread_rgb(path):
+    """
+    Lee una imagen y la devuelve en formato RGB (OpenCV lee en BGR).
+    
+    Args:
+        path (str or Path): Ruta a la imagen.
+    
+    Returns:
+        img_rgb (np.ndarray): Imagen en formato RGB.
+    """
+    img_bgr = cv2.imread(str(path), cv2.IMREAD_COLOR)
+    assert img_bgr is not None, f"No se pudo leer la imagen {path}"
+    img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
+    
+    return img_rgb
+
+def resize_width(img, width):
+    """
+    Redimensiona una imagen manteniendo la relación de aspecto.
+    
+    Args:
+        img (np.ndarray): Imagen a redimensionar.
+        width (int): Nuevo ancho.
+    
+    Returns:
+        img_resized (np.ndarray): Imagen redimensionada.
+    """
+    if width is None or img.shape[1] <= width:
+        return img
+    r = width / img.shape[1]
+
+    return cv2.resize(img, (int(img.shape[1] * r), int(img.shape[0] * r)), interpolation=cv2.INTER_AREA)
+
+# --- VISUALIZACIÓN ---
+def visualize_keypoints(images, idx, img_gray, keypoint, ANCHOR_IDX=1):
+    img_kp = cv2.drawKeypoints(
+        img_gray, keypoint, None, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS
+    )
+    plt.figure(figsize=(12, 8))
+    plt.imshow(img_kp)
+    plt.title(f"{images[idx]}\nKeypoints: {len(keypoint)}" + ("\nAncla" if idx == ANCHOR_IDX else ""))
+    plt.axis("off")
+    plt.show()
+
+def visualize_comparison(images, imgs_gray, kps_list, kps_anms_list, ANCHOR_IDX=1):
+    for idx, (img_cuadro_gray, kps, kps_anms) in enumerate(zip(imgs_gray, kps_list, kps_anms_list)):
+        img_kp = cv2.drawKeypoints(
+            img_cuadro_gray, kps, None, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS
+        )
+        img_kp_anms = cv2.drawKeypoints(
+            img_cuadro_gray, kps_anms, None, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS
+        )
+
+        plt.figure(figsize=(16, 8))
+        plt.subplot(1, 2, 1)
+        plt.imshow(img_kp)
+        plt.title(f"{images[idx]}\nKeypoints: {len(kps)}" + ("\nAncla" if idx == ANCHOR_IDX else ""))
+        plt.axis("off")
+
+        plt.subplot(1, 2, 2)
+        plt.imshow(img_kp_anms)
+        plt.title(f"{images[idx]} + ANMS\nKeypoints: {len(kps_anms)}" + ("\nAncla" if idx == ANCHOR_IDX else ""))
+        plt.axis("off")
+
+        plt.show()

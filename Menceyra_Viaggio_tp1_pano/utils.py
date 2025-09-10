@@ -2,6 +2,51 @@ import numpy as np
 import matplotlib.pyplot as plt
 import cv2
 
+def anms_select(keypoints, descriptors, N=800, c_robust=1.1):
+    """
+    Adaptive Non-Maximal Suppression (ANMS) para seleccionar keypoints
+    distribuidos uniformemente en la imagen.
+
+    Args:
+        keypoints (list of cv2.KeyPoint): Lista de keypoints detectados.
+        descriptors (np.ndarray): Descriptores asociados a los keypoints.
+        N (int): Número de keypoints a seleccionar.
+        c_robust (float): Constante para robustez en la selección.
+    
+    Returns:
+        selected_keypoints (list of cv2.KeyPoint): Keypoints seleccionados.
+        selected_descriptors (np.ndarray): Descriptores asociados a los keypoints seleccionados.
+    """
+    n = len(keypoints)
+    if n == 0:
+        return [], None
+    if n <= N:
+        return keypoints, descriptors
+
+    # Extraer coordenadas y respuestas
+    coords = np.array([kp.pt for kp in keypoints], dtype=np.float32)
+    responses = np.array([kp.response for kp in keypoints], dtype=np.float32)
+
+    # Inicializar radios de supresión
+    ratios = np.full(n, np.inf, dtype=np.float32)
+
+    for i in range(n):
+        r_i = np.inf
+        for j in range(n):
+            if responses[j] > c_robust * responses[i]:
+                dist = np.linalg.norm(coords[i] - coords[j])
+                if dist < r_i:
+                    r_i = dist
+        ratios[i] = r_i
+
+    # Seleccionar los N keypoints con los mayores radios
+    N_effective = min(N, n)
+    selected_indices = np.argsort(-ratios)[:N_effective]
+    selected_keypoints = [keypoints[i] for i in selected_indices]
+    selected_descriptors = descriptors[selected_indices] if descriptors is not None else None
+
+    return selected_keypoints, selected_descriptors
+
 def pick_points_cv2(img, n=4, win_name="Seleccionar puntos", radius=5):
     """
     Selecciona n puntos (x,y) sobre 'img'. Cierra con:
