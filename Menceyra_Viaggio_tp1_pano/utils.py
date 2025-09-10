@@ -1,5 +1,57 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import cv2
+
+def pick_points_cv2(img, n=4, win_name="Seleccionar puntos", radius=5):
+    """
+    Selecciona n puntos (x,y) sobre 'img'. Cierra con:
+    - juntar n puntos
+    - Enter / ESC / 'q'
+    - cerrar la ventana (botón rojo)
+    Devuelve np.array shape (k,2), dtype=int.
+    """
+    # Preparar imagen para mostrar (BGR para OpenCV)
+    if img.ndim == 2:
+        disp = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
+    else:
+        disp = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+
+    pts = []
+
+    def mouse_cb(event, x, y, flags, param):
+        if event == cv2.EVENT_LBUTTONDOWN and len(pts) < n:
+            pts.append((x, y))
+            cv2.circle(disp, (x, y), radius, (0, 255, 0), -1)
+
+    cv2.namedWindow(win_name, cv2.WINDOW_NORMAL)
+    cv2.setMouseCallback(win_name, mouse_cb)
+
+    while True:
+        # Refrescar ventana y drenar eventos
+        cv2.imshow(win_name, disp)
+        k = cv2.waitKey(20) & 0xFF
+
+        # teclas para salir
+        if k in (13, 27, ord('q')):   # Enter, ESC o 'q'
+            break
+
+        # salir si ya juntamos n puntos
+        if len(pts) >= n:
+            break
+
+        # salir si el usuario cierra la ventana
+        # (en macOS/Qt puede devolver < 1 cuando se cierra)
+        if cv2.getWindowProperty(win_name, cv2.WND_PROP_VISIBLE) < 1:
+            break
+
+    # soltar callback y cerrar robustamente
+    cv2.setMouseCallback(win_name, lambda *args: None)
+    cv2.destroyWindow(win_name)
+    # En macOS conviene drenar algunos eventos extra
+    for _ in range(5):
+        cv2.waitKey(1)
+
+    return np.array(pts, dtype=int)
 
 def dlt(ori, dst):
 
@@ -74,3 +126,14 @@ def pick_points(img, n=4, title="Hacé click en los puntos (izq→der). Cerrar c
     pts[:, 0] = np.clip(pts[:, 0], 0, W - 1)  # x
     pts[:, 1] = np.clip(pts[:, 1], 0, H - 1)  # y
     return pts
+
+def show_points(img, pts, title):
+    plt.figure(figsize=(5,5))
+    if img.ndim == 2:
+        plt.imshow(img, cmap='gray')
+    else:
+        plt.imshow(img)
+    for i, (x,y) in enumerate(pts, start=1):
+        plt.scatter([x],[y], s=30)
+        plt.text(x+5, y-5, str(i))
+    plt.title(title); plt.axis('off'); plt.show()
