@@ -37,6 +37,18 @@ def resize_width(img, width):
 
 # --- VISUALIZACIÓN ---
 def visualize_keypoints(images, idx, img_gray, keypoint, ANCHOR_IDX=1):
+    """
+    Visualiza los keypoints detectados en una imagen.
+    
+    Args:
+        images (list of str): Lista de nombres de las imágenes.
+        idx (int): Índice de la imagen actual.
+        img_gray (np.ndarray): Imagen en escala de grises.
+        keypoint (list of cv2.KeyPoint): Keypoints detectados.
+        ANCHOR_IDX (int): Índice de la imagen ancla para el título.
+    
+    Returns:
+        None"""
     img_kp = cv2.drawKeypoints(
         img_gray, keypoint, None, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS
     )
@@ -47,6 +59,20 @@ def visualize_keypoints(images, idx, img_gray, keypoint, ANCHOR_IDX=1):
     plt.show()
 
 def visualize_comparison(images, idx, img_gray, keypoints, keypoints_anms, ANCHOR_IDX=1):
+    """
+    Visualiza la comparación entre keypoints originales y keypoints seleccionados por ANMS.
+    
+    Args:
+        images (list of str): Lista de nombres de las imágenes.
+        idx (int): Índice de la imagen actual.
+        img_gray (np.ndarray): Imagen en escala de grises.
+        keypoints (list of cv2.KeyPoint): Keypoints originales detectados.
+        keypoints_anms (list of cv2.KeyPoint): Keypoints seleccionados por ANMS.
+        ANCHOR_IDX (int): Índice de la imagen ancla para el título.
+    
+    Returns:
+        None
+    """
     img_kp = cv2.drawKeypoints(
         img_gray, keypoints, None, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS
     )
