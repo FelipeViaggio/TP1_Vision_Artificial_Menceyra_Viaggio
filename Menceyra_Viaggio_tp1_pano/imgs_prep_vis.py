@@ -1,5 +1,7 @@
 import cv2
 from matplotlib import pyplot as plt
+import numpy as np
+from random import sample
 
 # --- PREPROCESAMIENTO ---
 def imread_rgb(path):
@@ -92,3 +94,28 @@ def visualize_comparison(images, idx, img_gray, keypoints, keypoints_anms, ANCHO
     plt.axis("off")
 
     plt.show()
+
+def draw_matches_gray(grayA, grayB, kpsA, kpsB, matches, max_draw=80, title=""):
+    """
+    Visualiza matches sobre fondo gris, submuestreando para claridad.
+    - grayA, grayB: imágenes en escala de grises (uint8).
+    - kpsA, kpsB: listas de cv2.KeyPoint.
+    - matches: list[cv2.DMatch].
+    """
+    if len(matches) > max_draw:
+        idx = sorted(sample(range(len(matches)), max_draw))
+        matches = [matches[i] for i in idx]
+
+    A_bgr = cv2.cvtColor(grayA, cv2.COLOR_GRAY2BGR)
+    B_bgr = cv2.cvtColor(grayB, cv2.COLOR_GRAY2BGR)
+
+    vis = cv2.drawMatches(
+        A_bgr, kpsA, B_bgr, kpsB, matches, None,
+        flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS
+    )
+    plt.figure(figsize=(14, 6))
+    plt.imshow(cv2.cvtColor(vis, cv2.COLOR_BGR2RGB))
+    plt.title(title)
+    plt.axis("off")
+    plt.show()
+

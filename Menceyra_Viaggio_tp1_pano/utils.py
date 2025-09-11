@@ -182,3 +182,83 @@ def show_points(img, pts, title):
         plt.scatter([x],[y], s=30)
         plt.text(x+5, y-5, str(i))
     plt.title(title); plt.axis('off'); plt.show()
+
+def lowe_ratio_filter(knn_matches, ratio: float = 0.75):
+    """
+    Apply Lowe's ratio test over knnMatches (k=2).
+    Keep m if distance(m) < ratio * distance(n).
+    """
+    good = []
+    for mn in knn_matches:
+        if len(mn) < 2:
+            continue
+        m, n = mn
+        if m.distance < ratio * n.distance:
+            good.append(m)
+    return good
+
+def cross_check_filter(matches_ab, matches_ba):
+    """
+    Symmetric cross-check:
+    - matches_ab: list[cv2.DMatch] with queryIdx in A and trainIdx in B
+    - matches_ba: list[cv2.DMatch] with queryIdx in B and trainIdx in A
+    Keep only reciprocal pairs (A_i <-> B_j).
+    """
+    ab = {(m.queryIdx, m.trainIdx) for m in matches_ab}
+    ba = {(m.trainIdx, m.queryIdx) for m in matches_ba}
+    inter = ab & ba
+    # reconstruyo DMatch "limpio" (distancia 0 para dibujar/usar índices)
+    return [cv2.DMatch(_queryIdx=i, _trainIdx=j, _imgIdx=0, _distance=0.0) for (i, j) in inter]
+
+def extract_matched_points(kpsA, kpsB, matches):
+    """
+    Convert list of DMatch into Nx2 arrays of (x, y) for each image.
+    Returns:
+        ptsA (np.ndarray Nx2), ptsB (np.ndarray Nx2)
+    """
+    if not matches:
+        return np.empty((0,2), np.float32), np.empty((0,2), np.float32)
+    ptsA = np.float32([kpsA[m.queryIdx].pt for m in matches])
+    ptsB = np.float32([kpsB[m.trainIdx].pt for m in matches])
+    return ptsA, ptsB
+
+def match_descriptors(descA, descB, method: str = "bf",
+                      use_lowe: bool = True, ratio: float = 0.75,
+                      do_crosscheck: bool = False):
+    """
+    Perform descriptor matching between A and B using BF or FLANN.
+    - For SIFT: NORM_L2 (ORB/BRIEF -> NORM_HAMMING).
+    - If use_lowe=True: apply Lowe ratio test (k=2).
+    - If do_crosscheck=True: keep only reciprocal matches A<->B.
+    Returns:
+        matches (list[cv2.DMatch]),
+        debug_counts (dict): {'knnAB','knnBA','ratioAB','ratioBA','final'}
+    """
+    if method.lower() == "bf":
+        matcher_ab = cv2.BFMatcher(cv2.NORM_L2, crossCheck=False)
+        matcher_ba = matcher_ab
+    elif method.lower() == "flann":
+        index_params = dict(algorithm=1, trees=5)   # KDTree
+        search_params = dict(checks=50)
+        matcher_ab = cv2.FlannBasedMatcher(index_params, search_params)
+        matcher_ba = matcher_ab
+    else:
+        raise ValueError("method must be 'bf' or 'flann'")
+
+    knnAB = matcher_ab.knnMatch(descA, descB, k=2)
+    knnBA = matcher_ba.knnMatch(descB, descA, k=2)
+
+    goodAB = lowe_ratio_filter(knnAB, ratio=ratio) if use_lowe else [m[0] for m in knnAB if m]
+    goodBA = lowe_ratio_filter(knnBA, ratio=ratio) if use_lowe else [m[0] for m in knnBA if m]
+
+    if do_crosscheck:
+        good = cross_check_filter(goodAB, goodBA)
+    else:
+        good = goodAB
+
+    dbg = {
+        "knnAB": len(knnAB), "knnBA": len(knnBA),
+        "ratioAB": len(goodAB), "ratioBA": len(goodBA),
+        "final": len(good)
+    }
+    return good, dbg
