@@ -46,24 +46,23 @@ def visualize_keypoints(images, idx, img_gray, keypoint, ANCHOR_IDX=1):
     plt.axis("off")
     plt.show()
 
-def visualize_comparison(images, imgs_gray, kps_list, kps_anms_list, ANCHOR_IDX=1):
-    for idx, (img_cuadro_gray, kps, kps_anms) in enumerate(zip(imgs_gray, kps_list, kps_anms_list)):
-        img_kp = cv2.drawKeypoints(
-            img_cuadro_gray, kps, None, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS
-        )
-        img_kp_anms = cv2.drawKeypoints(
-            img_cuadro_gray, kps_anms, None, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS
-        )
+def visualize_comparison(images, idx, img_gray, keypoints, keypoints_anms, ANCHOR_IDX=1):
+    img_kp = cv2.drawKeypoints(
+        img_gray, keypoints, None, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS
+    )
+    img_kp_anms = cv2.drawKeypoints(
+        img_gray, keypoints_anms, None, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS
+    )
 
-        plt.figure(figsize=(16, 8))
-        plt.subplot(1, 2, 1)
-        plt.imshow(img_kp)
-        plt.title(f"{images[idx]}\nKeypoints: {len(kps)}" + ("\nAncla" if idx == ANCHOR_IDX else ""))
-        plt.axis("off")
+    plt.figure(figsize=(16, 8))
+    plt.subplot(1, 2, 1)
+    plt.imshow(img_kp)
+    plt.title(f"{images[idx]}\nKeypoints: {len(keypoints)}" + ("\nAncla" if idx == ANCHOR_IDX else ""))
+    plt.axis("off")
 
-        plt.subplot(1, 2, 2)
-        plt.imshow(img_kp_anms)
-        plt.title(f"{images[idx]} + ANMS\nKeypoints: {len(kps_anms)}" + ("\nAncla" if idx == ANCHOR_IDX else ""))
-        plt.axis("off")
+    plt.subplot(1, 2, 2)
+    plt.imshow(img_kp_anms)
+    plt.title(f"{images[idx]} + ANMS\nKeypoints: {len(keypoints_anms)}" + ("\nAncla" if idx == ANCHOR_IDX else ""))
+    plt.axis("off")
 
-        plt.show()
+    plt.show()
