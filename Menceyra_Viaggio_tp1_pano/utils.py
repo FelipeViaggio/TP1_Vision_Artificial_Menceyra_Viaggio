@@ -289,7 +289,7 @@ def _degenerate(pts):
     area = 0.5 * abs(np.dot(x, np.roll(y, -1)) - np.dot(y, np.roll(x, -1)))
     return area < 1e-3
 
-def ransac_homography(ptsA, ptsB, thresh=3.0, max_trials=2000, confidence=0.995, random_state=None, refine="opencv"):
+def ransac_homography(ptsA, ptsB, thresh=3.0, max_trials=2000, confidence=0.995, random_state=42, refine="opencv"):
     """
     Estimate a robust homography with RANSAC + final refinement using inliers.
     Model is A <- B (warp B onto A).
@@ -360,7 +360,7 @@ def ransac_homography(ptsA, ptsB, thresh=3.0, max_trials=2000, confidence=0.995,
     B_in = B[best_inliers]
 
     if refine == "dlt":
-        H_ref = dlt(B_in, A_in)
+        H_ref = dlt(A_in, B_in)
     else:
         H_ref, _ = cv2.findHomography(B_in, A_in, method=0)
 
