@@ -650,10 +650,7 @@ def pano_blend_3(imgA, imgB, imgC, H_AB, H_AC, blur_ksize=11):
     mC = (canC.sum(axis=2) > 0); no_blend[mC] = canC[mC]
 
     # weighted_blend y auto_crop_nonzero ya existen en utils (3.7)
-    pano = weighted_blend([canA, canB, canC],) if 'weighted_blend' in globals() else weighted_blend([canA, canB, canC])
-    if blur_ksize and blur_ksize > 1:
-        pano = weighted_blend([canA, canB, canC], blur_ksize=blur_ksize)
-
+    pano = weighted_blend([canA, canB, canC])
     pano_crop = auto_crop_nonzero(pano)
 
     return {
