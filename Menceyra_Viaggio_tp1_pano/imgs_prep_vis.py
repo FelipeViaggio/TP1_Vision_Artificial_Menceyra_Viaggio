@@ -98,7 +98,7 @@ def visualize_comparison(images, idx, img_gray, keypoints, keypoints_anms, ANCHO
 def draw_matches_gray(grayA, grayB, kpsA, kpsB, matches, max_draw=80, title=""):
     """
     Visualiza matches sobre fondo gris, submuestreando para claridad.
-    - grayA, grayB: imágenes en escala de grises (uint8).
+    - grayA, grayB: imágenes en escala de grises.
     - kpsA, kpsB: listas de cv2.KeyPoint.
     - matches: list[cv2.DMatch].
     """
@@ -121,7 +121,7 @@ def draw_matches_gray(grayA, grayB, kpsA, kpsB, matches, max_draw=80, title=""):
 
 def draw_matches_subset_gray(grayA, grayB, kpsA, kpsB, matches, mask_bool, title="", max_draw=120):
     """
-    Visualiza un subconjunto de matches (p. ej., inliers RANSAC) sobre fondo gris.
+    Visualiza un subconjunto de matches sobre fondo gris.
     
     Args:
         grayA (np.ndarray): Imagen A en escala de grises (uint8).
@@ -159,7 +159,7 @@ def draw_matches_subset_gray(grayA, grayB, kpsA, kpsB, matches, mask_bool, title
 
 def plot_inliers_side_by_side(imgA, imgB, ptsA, ptsB, inliers_mask, max_draw=300):
     """
-    Muestra A | B con líneas verdes solo entre inliers (estilo consigna).
+    Muestra A | B con líneas solo entre inliers.
 
     Args:
         imgA (np.ndarray): Imagen ancla A (RGB o gris).
@@ -201,10 +201,9 @@ def plot_inliers_side_by_side(imgA, imgB, ptsA, ptsB, inliers_mask, max_draw=300
     plt.axis("off")
     plt.show()
 
-
 def draw_matches_inliers_only(imgA, imgB, kpsA, kpsB, matches, inliers_mask, max_draw=300):
     """
-    Dibuja SOLO inliers con cv2.drawMatches (verde para matches, rojo para puntos sueltos).
+    Dibuja solo inliers con cv2.drawMatches.
 
     Args:
         imgA (np.ndarray): Imagen A (RGB o gris).
@@ -228,7 +227,6 @@ def draw_matches_inliers_only(imgA, imgB, kpsA, kpsB, matches, inliers_mask, max
         if hasattr(m, "queryIdx"):
             keep.append(m)
         else:
-            # por si viniera como par (idxA, idxB)
             keep.append(cv2.DMatch(_queryIdx=int(m[0]), _trainIdx=int(m[1]), _imgIdx=0, _distance=0))
 
     if len(keep) > max_draw:
@@ -246,11 +244,9 @@ def draw_matches_inliers_only(imgA, imgB, kpsA, kpsB, matches, inliers_mask, max
     plt.axis("off")
     plt.show()
 
-
 def quick_overlay(imgA, imgB, H):
     """
-    Preview rápido: B warpeada sobre el tamaño de A + polígono de esquinas transformadas.
-
+    Muestra una vista previa rápida de B warpeada sobre A, con blending simple en la región válida.
     Args:
         imgA (np.ndarray): Imagen ancla A (RGB).
         imgB (np.ndarray): Imagen B (RGB).
@@ -321,7 +317,7 @@ def draw_canvas_polygons(preview_img, CA_T, CB_T, title="Esquinas en canvas (ver
     Dibuja los polígonos de las esquinas de A y de H·B sobre una imagen del canvas.
 
     Args:
-        preview_img (np.ndarray): Imagen del canvas (por ejemplo, la de preview).
+        preview_img (np.ndarray): Imagen del canvas.
         CA_T (np.ndarray): Esquinas de A transformadas por T (4,2).
         CB_T (np.ndarray): Esquinas de B->A transformadas por T (4,2).
         title (str): Título de la figura.
@@ -387,7 +383,7 @@ def show_blending_result(no_blend_img, blended_img):
 
 def show_three_images_no_blend(canA, canB, canC, title="Canvas sin blending (A + B + C)"):
     """
-    Visualiza el canvas combinando A/B/C sin blending (B y C sobrescriben A donde existan).
+    Visualiza el canvas combinando A/B/C sin blending.
 
     Args:
         canA (np.ndarray): A en canvas.

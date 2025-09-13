@@ -24,11 +24,11 @@ def anms_select(keypoints, descriptors, N=800, c_robust=1.1):
         return keypoints, descriptors
 
     # Extraer coordenadas y respuestas
-    coords = np.array([kp.pt for kp in keypoints], dtype=np.float32)
-    responses = np.array([kp.response for kp in keypoints], dtype=np.float32)
+    coords = np.array([kp.pt for kp in keypoints])
+    responses = np.array([kp.response for kp in keypoints])
 
     # Inicializar radios de supresión
-    ratios = np.full(n, np.inf, dtype=np.float32)
+    ratios = np.full(n, np.inf)
 
     for i in range(n):
         r_i = np.inf
@@ -49,11 +49,8 @@ def anms_select(keypoints, descriptors, N=800, c_robust=1.1):
 
 def pick_points(img, n=4, win_name="Seleccionar puntos", radius=5):
     """
-    Selecciona n puntos (x,y) sobre 'img'. Cierra con:
-    - juntar n puntos
-    - Enter / ESC / 'q'
-    - cerrar la ventana (botón rojo)
-    Devuelve np.array shape (k,2), dtype=int.
+    Selecciona n puntos (x,y) sobre 'img'. 
+    Devuelve np.array shape (k,2).
     """
     # Preparar imagen para mostrar (BGR para OpenCV)
     if img.ndim == 2:
@@ -72,12 +69,12 @@ def pick_points(img, n=4, win_name="Seleccionar puntos", radius=5):
     cv2.setMouseCallback(win_name, mouse_cb)
 
     while True:
-        # Refrescar ventana y drenar eventos
+        # Refrescar ventana 
         cv2.imshow(win_name, disp)
         k = cv2.waitKey(20) & 0xFF
 
         # teclas para salir
-        if k in (13, 27, ord('q')):   # Enter, ESC o 'q'
+        if k in (13, 27, ord('q')):  
             break
 
         # salir si ya juntamos n puntos
@@ -85,14 +82,12 @@ def pick_points(img, n=4, win_name="Seleccionar puntos", radius=5):
             break
 
         # salir si el usuario cierra la ventana
-        # (en macOS/Qt puede devolver < 1 cuando se cierra)
         if cv2.getWindowProperty(win_name, cv2.WND_PROP_VISIBLE) < 1:
             break
 
-    # soltar callback y cerrar robustamente
+    # soltar callback
     cv2.setMouseCallback(win_name, lambda *args: None)
     cv2.destroyWindow(win_name)
-    # En macOS conviene drenar algunos eventos extra
     for _ in range(5):
         cv2.waitKey(1)
 
@@ -100,7 +95,7 @@ def pick_points(img, n=4, win_name="Seleccionar puntos", radius=5):
 
 def dlt(ori, dst):
 
-    # Construct matrix A and vector b
+    # Construir matriz A y vector b
     A = []
     b = []
     for i in range(4):
@@ -141,8 +136,8 @@ def show_points(img, pts, title):
 
 def lowe_ratio_filter(knn_matches, ratio: float = 0.75):
     """
-    Apply Lowe's ratio test over knnMatches (k=2).
-    Keep m if distance(m) < ratio * distance(n).
+    Aplica el test de razón de Lowe sobre knnMatches (k=2).
+    Mantiene m si distance(m) < ratio * distance(n).
     """
     good = []
     for mn in knn_matches:
@@ -155,22 +150,17 @@ def lowe_ratio_filter(knn_matches, ratio: float = 0.75):
 
 def cross_check_filter(matches_ab, matches_ba):
     """
-    Symmetric cross-check:
-    - matches_ab: list[cv2.DMatch] with queryIdx in A and trainIdx in B
-    - matches_ba: list[cv2.DMatch] with queryIdx in B and trainIdx in A
-    Keep only reciprocal pairs (A_i <-> B_j).
+    Filtra matches para quedarse solo con los que son recíprocos A<->B.
     """
     ab = {(m.queryIdx, m.trainIdx) for m in matches_ab}
     ba = {(m.trainIdx, m.queryIdx) for m in matches_ba}
     inter = ab & ba
-    # reconstruyo DMatch "limpio" (distancia 0 para dibujar/usar índices)
+    # reconstruyo DMatch "limpio"
     return [cv2.DMatch(_queryIdx=i, _trainIdx=j, _imgIdx=0, _distance=0.0) for (i, j) in inter]
 
 def extract_matched_points(kpsA, kpsB, matches):
     """
-    Convert list of DMatch into Nx2 arrays of (x, y) for each image.
-    Returns:
-        ptsA (np.ndarray Nx2), ptsB (np.ndarray Nx2)
+    Dado un conjunto de matches entre kpsA y kpsB, extrae los puntos 2D
     """
     if not matches:
         return np.empty((0,2), np.float32), np.empty((0,2), np.float32)
@@ -178,23 +168,15 @@ def extract_matched_points(kpsA, kpsB, matches):
     ptsB = np.float32([kpsB[m.trainIdx].pt for m in matches])
     return ptsA, ptsB
 
-def match_descriptors(descA, descB, method: str = "bf",
-                      use_lowe: bool = True, ratio: float = 0.75,
-                      do_crosscheck: bool = False):
+def match_descriptors(descA, descB, method = "bf", use_lowe= True, ratio = 0.75, do_crosscheck= False):
     """
-    Perform descriptor matching between A and B using BF or FLANN.
-    - For SIFT: NORM_L2 (ORB/BRIEF -> NORM_HAMMING).
-    - If use_lowe=True: apply Lowe ratio test (k=2).
-    - If do_crosscheck=True: keep only reciprocal matches A<->B.
-    Returns:
-        matches (list[cv2.DMatch]),
-        debug_counts (dict): {'knnAB','knnBA','ratioAB','ratioBA','final'}
+    Empareja descriptores entre A y B con knn (k=2) + test de Lowe + cross-check opcional.
     """
     if method.lower() == "bf":
         matcher_ab = cv2.BFMatcher(cv2.NORM_L2, crossCheck=False)
         matcher_ba = matcher_ab
     elif method.lower() == "flann":
-        index_params = dict(algorithm=1, trees=5)   # KDTree
+        index_params = dict(algorithm=1, trees=5)  
         search_params = dict(checks=50)
         matcher_ab = cv2.FlannBasedMatcher(index_params, search_params)
         matcher_ba = matcher_ab
@@ -221,33 +203,16 @@ def match_descriptors(descA, descB, method: str = "bf",
 
 def _proj(H, P):
     """
-    Project 2D points with a homography.
-
-    Args:
-        H (np.ndarray): Homography (3x3).
-        P (np.ndarray): Points (N,2) in Euclidean coordinates.
-
-    Returns:
-        np.ndarray: Projected points (N,2) in Euclidean coordinates.
+    Proyecta puntos P con homografía H.
     """
-    # Proyecta P (N,2) con H, devuelve (N,2).
+    # Proyecta P (N,2) con H
     P1 = np.hstack([P, np.ones((P.shape[0], 1))])
     Q  = (H @ P1.T).T
     return Q[:, :2] / Q[:, 2:3]
 
 def _sym_reproj_error(H, A, B):
     """
-    Symmetric reprojection error consistent with A <- B.
-    forward:  B --H--> A_hat (compare vs A)
-    backward: A --H^-1--> B_hat (compare vs B)
-
-    Args:
-        H (np.ndarray): Homography (3x3) mapping B -> A.
-        A (np.ndarray): Points in A (N,2).
-        B (np.ndarray): Points in B (N,2).
-
-    Returns:
-        np.ndarray: Per-point symmetric error (N,).
+    Error de reproyección simétrico entre A y B con H: A <- B.
     """
     # Si H es singular/condición mala, devolvemos inf para forzar descarte
     if not np.all(np.isfinite(H)):
@@ -274,13 +239,7 @@ def _sym_reproj_error(H, A, B):
 
 def _degenerate(pts):
     """
-    Quick degeneracy check to avoid near-collinear 4-point samples.
-
-    Args:
-        pts (np.ndarray): Sample points (M,2), M>=3.
-
-    Returns:
-        bool: True if degenerate (area ~ 0).
+    Chequea si un conjunto de puntos es degenerado (colineal o casi).
     """
     # Evitar 4 puntos casi colineales 
     if pts.shape[0] < 3:
@@ -291,24 +250,10 @@ def _degenerate(pts):
 
 def ransac_homography(ptsA, ptsB, thresh=3.0, max_trials=2000, confidence=0.995, random_state=42, refine="opencv"):
     """
-    Estimate a robust homography with RANSAC + final refinement using inliers.
-    Model is A <- B (warp B onto A).
-
-    Args:
-        ptsA (np.ndarray): Points in A (N,2).
-        ptsB (np.ndarray): Points in B (N,2).
-        thresh (float): Inlier threshold in pixels (symmetric error).
-        max_trials (int): Maximum RANSAC iterations (adaptive).
-        confidence (float): Target success probability.
-        random_state (int or None): RNG seed.
-        refine (str): "opencv" (cv2.findHomography without RANSAC) or "dlt" (your DLT) using inliers.
-
-    Returns:
-        H_ref (np.ndarray): Refined homography (3x3) such that A <- B.
-        inliers (np.ndarray): Boolean mask (N,) of inliers.
+    Estima homografía robusta con RANSAC y DLT.
     """
-    A = np.asarray(ptsA, dtype=float)
-    B = np.asarray(ptsB, dtype=float)
+    A = np.asarray(ptsA)
+    B = np.asarray(ptsB)
     assert A.shape == B.shape and A.shape[0] >= 4 and A.shape[1] == 2
 
     N = A.shape[0]
@@ -321,10 +266,10 @@ def ransac_homography(ptsA, ptsB, thresh=3.0, max_trials=2000, confidence=0.995,
     s = 4  # tamaño de muestra mínima
     T = int(max_trials)
     trials_done = 0
-
+    # ciclo principal de RANSAC
     while trials_done < T:
         trials_done += 1
-
+        # muestra aleatoria sin reemplazo
         idx = rng.choice(N, size=s, replace=False)
         if _degenerate(A[idx]) or _degenerate(B[idx]):
             continue
@@ -334,14 +279,14 @@ def ransac_homography(ptsA, ptsB, thresh=3.0, max_trials=2000, confidence=0.995,
             H = dlt(B[idx], A[idx])  
         except Exception:
             continue
-
+        # Evaluar modelo
         err = _sym_reproj_error(H, A, B)
         if not np.all(np.isfinite(err)):
             continue
-
+        # Inliers
         inliers = err < thresh
         ninl = int(inliers.sum())
-
+        # Actualizar mejor modelo
         if ninl > best_n:
             best_n = ninl
             best_inliers = inliers
@@ -351,11 +296,12 @@ def ransac_homography(ptsA, ptsB, thresh=3.0, max_trials=2000, confidence=0.995,
             w = min(max(w, 1e-6), 1 - 1e-6)
             need = np.log(1 - confidence) / np.log(1 - w**s)
             T = int(min(T, max(100, np.ceil(need))))
-
+    
+    # 
     if best_inliers is None or best_n < 4:
-        raise RuntimeError("RANSAC no encontró modelo. Ajustá 'thresh' o revisá los datos.")
+        raise RuntimeError("RANSAC no encontró modelo.")
 
-    # Refinar con TODOS los inliers (SIN RANSAC)
+    # Refinar con TODOS los inliers 
     A_in = A[best_inliers]
     B_in = B[best_inliers]
 
@@ -368,26 +314,14 @@ def ransac_homography(ptsA, ptsB, thresh=3.0, max_trials=2000, confidence=0.995,
 
 def _corners(img):
     """
-    Devuelve las 4 esquinas de una imagen como (4,1,2) float32.
-
-    Args:
-        img (np.ndarray): Imagen.
-
-    Returns:
-        np.ndarray: Arreglo con esquinas [[0,0],[w-1,0],[w-1,h-1],[0,h-1]].
+    Devuelve las 4 esquinas de una imagen
     """
     h, w = img.shape[:2]
     return np.array([[0, 0], [w-1, 0], [w-1, h-1], [0, h-1]], dtype=np.float32).reshape(-1, 1, 2)
 
 def _bbox_from_points(P):
     """
-    Calcula el bounding box mínimo de un conjunto de puntos.
-
-    Args:
-        P (np.ndarray): Puntos (N,1,2) float32.
-
-    Returns:
-        tuple: (xmin, ymin, xmax, ymax) como ints (floor/ceil).
+    Dado un conjunto de puntos P (N,1,2) o (N,2), devuelve el bounding box
     """
     P2 = P.reshape(-1, 2)
     xmin, ymin = np.floor(P2.min(axis=0))
@@ -396,14 +330,7 @@ def _bbox_from_points(P):
 
 def _build_translation(tx, ty):
     """
-    Construye una homografía de traslación.
-
-    Args:
-        tx (float): Traslación en x.
-        ty (float): Traslación en y.
-
-    Returns:
-        np.ndarray: Matriz 3x3 de traslación.
+    Construye matriz de traslación 3x3.
     """
     return np.array([[1, 0, tx],
                      [0, 1, ty],
@@ -411,28 +338,14 @@ def _build_translation(tx, ty):
 
 def compute_optimal_canvas(imgA, imgB, H_A_from_B):
     """
-    Dado H: A <- B, calcula el bounding box mínimo que contiene:
-      - las 4 esquinas de A en A (sin transformar)
-      - las 4 esquinas de B transformadas con H
-
-    Args:
-        imgA (np.ndarray): Imagen ancla A.
-        imgB (np.ndarray): Imagen vecina B.
-        H_A_from_B (np.ndarray): Homografía tal que A <- B.
-
-    Returns:
-        T (np.ndarray): Traslación para llevar todo a coords positivas.
-        size (tuple): (Wc, Hc) del canvas óptimo.
-        CA (np.ndarray): Esquinas de A en coords A (4,1,2).
-        CB_A (np.ndarray): Esquinas de B transformadas a A (4,1,2).
-        bbox (tuple): (xmin, ymin, xmax, ymax) antes de aplicar T.
+    Calcula el canvas óptimo que contiene A y H_A_from_B·B (todas en coords de A)
     """
     CA = _corners(imgA)                                    # esquinas de A en coords A
     CB = _corners(imgB)                                    # esquinas de B
     CB_A = cv2.perspectiveTransform(CB, H_A_from_B)        # B -> A
 
     # Juntar y sacar bbox
-    allP = np.vstack([CA, CB_A])                           # (8,1,2)
+    allP = np.vstack([CA, CB_A])                          
     xmin, ymin, xmax, ymax = _bbox_from_points(allP)
 
     # Traslación para evitar coords negativas
@@ -447,47 +360,22 @@ def compute_optimal_canvas(imgA, imgB, H_A_from_B):
 
 def place_A_on_canvas(imgA, T, size):
     """
-    Ubica A en el canvas usando solo la traslación T (warpPerspective con T).
-
-    Args:
-        imgA (np.ndarray): Imagen A.
-        T (np.ndarray): Traslación 3x3.
-        size (tuple): (Wc, Hc) del canvas.
-
-    Returns:
-        np.ndarray: Imagen A colocada en el canvas.
+    Warpea A con traslación T: coords de canvas.
     """
     Wc, Hc = size
     return cv2.warpPerspective(imgA, T, (Wc, Hc))
 
 def warp_B_to_canvas(imgB, H_A_from_B, T, size):
     """
-    Warpea B con H y luego aplica traslación T: coords de canvas.
-
-    Args:
-        imgB (np.ndarray): Imagen B.
-        H_A_from_B (np.ndarray): Homografía tal que A <- B.
-        T (np.ndarray): Traslación 3x3.
-        size (tuple): (Wc, Hc) del canvas.
-
-    Returns:
-        tuple: (B_en_canvas, H_ajustada) donde H_ajustada = T @ H_A_from_B.
+    Warpea B con H_A_from_B y luego T: coords de canvas.
     """
     Wc, Hc = size
-    H_adj = T @ H_A_from_B                  # primero H, luego T
+    H_adj = T @ H_A_from_B                  
     return cv2.warpPerspective(imgB, H_adj, (Wc, Hc)), H_adj
 
 def compute_weights(mask_uint8, blur_ksize=0, eps=1e-6):
     """
-    Genera pesos suaves en [0,1] a partir de una máscara binaria.
-    
-    Args:
-        mask_uint8 (np.ndarray): Máscara 0/1 (o 0/255), 2D.
-        blur_ksize (int): Tamaño impar del kernel gaussiano (0 = sin blur).
-        eps (float): Pequeño valor para evitar divisiones por cero.
-    
-    Returns:
-        np.ndarray: Pesos normalizados en [0,1], tipo float32, misma forma que la máscara.
+    Calcula pesos por distancia al borde de la región válida (mask > 0).
     """
     m = (mask_uint8 > 0).astype(np.uint8)
     # distancia al borde (dentro de la región válida)
@@ -496,18 +384,12 @@ def compute_weights(mask_uint8, blur_ksize=0, eps=1e-6):
         dist = cv2.GaussianBlur(dist, (blur_ksize, blur_ksize), 0)
     mx = float(dist.max())
     if mx < eps:
-        return dist.astype(np.float32)  # todo cero
+        return dist.astype(np.float32) 
     return (dist / (mx + eps)).astype(np.float32)
 
 def weighted_blend(canvas_imgs):
     """
     Hace blending canal a canal con pesos de distanceTransform.
-    
-    Args:
-        canvas_imgs (list[np.ndarray]): Imágenes ya en el canvas (uint8, mismas dims).
-    
-    Returns:
-        np.ndarray: Imagen blend final (uint8).
     """
     Hc, Wc = canvas_imgs[0].shape[:2]
     # Acumuladores
@@ -521,9 +403,11 @@ def weighted_blend(canvas_imgs):
         else:
             m = (img.sum(axis=2) > 0).astype(np.uint8)
             img3 = img
-        w = compute_weights(m, blur_ksize=0)  # podés probar blur_ksize=11 para transiciones más suaves
+        # pesos
+        w = compute_weights(m, blur_ksize=0)  
         acc_num += (img3.astype(np.float32) * w[..., None])
         acc_den += w
+    # evitar división por cero
     acc_den = np.clip(acc_den, 1e-6, None)
     out = (acc_num / acc_den[..., None])
     return np.clip(out, 0, 255).astype(np.uint8)
@@ -531,12 +415,6 @@ def weighted_blend(canvas_imgs):
 def auto_crop_nonzero(img):
     """
     Recorta automáticamente al bounding box no vacío de una imagen en canvas.
-    
-    Args:
-        img (np.ndarray): Imagen en canvas (RGB o gris).
-    
-    Returns:
-        np.ndarray: Imagen recortada.
     """
     if img.ndim == 2:
         m = img > 0
@@ -551,40 +429,16 @@ def auto_crop_nonzero(img):
 
 def compute_optimal_canvas_3(imgA, imgB, imgC, H_AB, H_AC):
     """
-    Canvas mínimo que contiene A, H_AB·B y H_AC·C (todas en coords de A).
-
-    Args:
-        imgA (np.ndarray): Imagen ancla A.
-        imgB (np.ndarray): Imagen B.
-        imgC (np.ndarray): Imagen C.
-        H_AB (np.ndarray): Homografía tal que A <- B.
-        H_AC (np.ndarray): Homografía tal que A <- C.
-
-    Returns:
-        T (np.ndarray): Traslación 3x3 para llevar todo a coords positivas.
-        size (tuple): (Wc, Hc) del canvas óptimo.
+    Calcula el canvas óptimo que contiene A, H_AB·B y H_AC·C (todas en coords de A).
     """
-    # Reutiliza helpers de 3.6 si ya están; si no, mantenemos estos internos
-    def _corners(img):
-        h, w = img.shape[:2]
-        return np.array([[0,0],[w-1,0],[w-1,h-1],[0,h-1]], dtype=np.float32).reshape(-1,1,2)
-
-    def _bbox_from_points(P):
-        P2 = P.reshape(-1,2)
-        xmin, ymin = np.floor(P2.min(axis=0))
-        xmax, ymax = np.ceil (P2.max(axis=0))
-        return int(xmin), int(ymin), int(xmax), int(ymax)
-
-    def _build_translation(tx, ty):
-        return np.array([[1,0,tx],[0,1,ty],[0,0,1]], dtype=np.float64)
-
+    # Esquinas de A, B y C en coords de A
     CA   = _corners(imgA)
     CB_A = cv2.perspectiveTransform(_corners(imgB), H_AB)
     CC_A = cv2.perspectiveTransform(_corners(imgC), H_AC)
-
+    # Juntar y sacar bbox
     allP = np.vstack([CA, CB_A, CC_A])
     xmin, ymin, xmax, ymax = _bbox_from_points(allP)
-
+    # Traslación para evitar coords negativas
     tx = -xmin if xmin < 0 else 0
     ty = -ymin if ymin < 0 else 0
     T  = _build_translation(tx, ty)
@@ -594,16 +448,7 @@ def compute_optimal_canvas_3(imgA, imgB, imgC, H_AB, H_AC):
 
 def place_on_canvas(img, H, size):
     """
-    Warp genérico con H (3x3) hacia el canvas.
-    Si H = T (solo traslación), sirve para la ancla.
-
-    Args:
-        img (np.ndarray): Imagen a warpear.
-        H (np.ndarray): Homografía 3x3 hacia el canvas.
-        size (tuple): (Wc, Hc).
-
-    Returns:
-        np.ndarray: Imagen en coords de canvas.
+    Warpea img con H: coords de canvas.
     """
     Wc, Hc = size
     return cv2.warpPerspective(img, H, (Wc, Hc))
@@ -611,29 +456,6 @@ def place_on_canvas(img, H, size):
 def pano_blend_3(imgA, imgB, imgC, H_AB, H_AC, blur_ksize=11):
     """
     Pipeline compacto para 3 imágenes: calcula canvas, warps y blending por distancia.
-
-    Args:
-        imgA (np.ndarray): A (ancla).
-        imgB (np.ndarray): B.
-        imgC (np.ndarray): C.
-        H_AB (np.ndarray): A <- B.
-        H_AC (np.ndarray): A <- C.
-        blur_ksize (int): kernel opcional para suavizar pesos (0 = sin blur).
-
-    Returns:
-        dict: {
-            'T': traslación 3x3,
-            'size': (Wc,Hc),
-            'H_A': T,
-            'H_Bad': T @ H_AB,
-            'H_Cad': T @ H_AC,
-            'canA': A en canvas,
-            'canB': B en canvas,
-            'canC': C en canvas,
-            'no_blend': preview sin blending,
-            'blend': panorámica con blending,
-            'blend_cropped': panorámica recortada
-        }
     """
     # Necesita: weighted_blend y auto_crop_nonzero definidos (3.7)
     T, size = compute_optimal_canvas_3(imgA, imgB, imgC, H_AB, H_AC)
