@@ -98,9 +98,18 @@ def visualize_comparison(images, idx, img_gray, keypoints, keypoints_anms, ANCHO
 def draw_matches_gray(grayA, grayB, kpsA, kpsB, matches, max_draw=80, title=""):
     """
     Visualiza matches sobre fondo gris, submuestreando para claridad.
-    - grayA, grayB: imágenes en escala de grises.
-    - kpsA, kpsB: listas de cv2.KeyPoint.
-    - matches: list[cv2.DMatch].
+
+    Args:
+        grayA (np.ndarray): Imagen A en escala de grises (uint8).
+        grayB (np.ndarray): Imagen B en escala de grises (uint8).
+        kpsA (list of cv2.KeyPoint): Keypoints de A.
+        kpsB (list of cv2.KeyPoint): Keypoints de B.
+        matches (list of cv2.DMatch): Lista completa de matches A<->B.
+        max_draw (int): Máximo de matches a dibujar.
+        title (str): Título de la figura.
+
+    Returns:
+        None
     """
     if len(matches) > max_draw:
         idx = sorted(sample(range(len(matches)), max_draw))
@@ -363,6 +372,7 @@ def show_no_blend(canvasA, canvasB, title="A y B en canvas (sin blending)"):
     plt.title(title)
     plt.axis("off")
     plt.show()
+    
     return no_blend
 
 def show_blending_result(no_blend_img, blended_img):
@@ -403,6 +413,7 @@ def show_three_images_no_blend(canA, canB, canC, title="Canvas sin blending (A +
     plt.title(title)
     plt.axis('off')
     plt.show()
+
     return out
 
 def show_three_blend_results(no_blend_img, blend_img, blend_cropped):
